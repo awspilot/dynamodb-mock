@@ -1,0 +1,26 @@
+{
+	"name": "@awspilot/dynamodb-mock",
+	"version": "0.0.1",
+	"description": "",
+	"main": "src/index.js",
+	"scripts": {
+		"test": "mocha --timeout 100000 -S -R spec --exit"
+	},
+	"bin": {
+		"dynamodb-mock": "./cli.js"
+	},
+	"dependencies": {
+	},
+	"devDependencies": {
+	},
+	"author": {
+		"name": "Adrian Praja",
+		"email": "adrian@databank.io",
+		"url": "https://awspilot.dev"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/awspilot/dynamodb-mock"
+	}
+}
