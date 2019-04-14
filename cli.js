@@ -146,17 +146,9 @@ http.createServer(function (request, response) {
 
 
 			switch ( event._POST.method ) {
-				//case 'listTables':
-				//case 'createTable':
-				//case 'deleteTable':
-				//case 'describeTable':
-				//case 'describeTimeToLive':
-				//case 'updateTimeToLive':
-				//case 'updateTable':
+
 				case 'scan':
 				case 'query':
-				//case 'deleteItem':
-				//case 'putItem':
 					dynamodb[event._POST.method](event._POST.payload, function(err, data) {
 						response.end(JSON.stringify({ err: err, data:data }));
 					})
