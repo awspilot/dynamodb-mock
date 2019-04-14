@@ -10,6 +10,7 @@
 		"dynamodb-mock": "./cli.js"
 	},
 	"dependencies": {
+		"aws-sdk": "*"
 	},
 	"devDependencies": {
 	},
