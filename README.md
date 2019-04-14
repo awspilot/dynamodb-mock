@@ -10,6 +10,6 @@ It's purpose is to
  - [ ] intercept and handle backup requests ( create, delete, restore, list )
  - [ ] publish cloudwatch metrics 
  - [ ] map lambda function to DynamoDB local streams 
- - [ ] if demo mode, prevent deleting demo tables and items
+ - [x] if demo mode, prevent deleting demo tables and items
 
 This is a subproject of @awspilot/dynamodb-ui
