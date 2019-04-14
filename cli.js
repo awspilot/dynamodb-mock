@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 var http = require('http')
-
+var is_demo = process.env.DEMO == '1';
 
 
 console.log("Starting dynamodb proxy server on port 10004")
@@ -11,6 +11,12 @@ http.createServer(function (client_req, client_res) {
 var body = '';
 client_req.on('data', function (data) {body += data;});
 client_req.on('end', function () {
+
+
+	console.log("body=", typeof body, body )
+	if (is_demo && client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteTable' ) {
+		
+	}
 
 	console.log("received request ",JSON.stringify({
 		url: client_req.url,
@@ -85,7 +91,7 @@ console.log("Starting dynamodb proxy server on port 10002")
 var http = require('http');
 var AWS = require('aws-sdk');
 AWS.config.update({ accessKeyId: "myKeyId", secretAccessKey: "secretKey", region: "us-east-1" })
-var is_demo = process.env.DEMO == '1';
+
 console.log("demo is ", is_demo ? 'ON' : 'OFF' )
 http.createServer(function (request, response) {
 	console.log( "[dynamoproxy]", request.method, request.url )
