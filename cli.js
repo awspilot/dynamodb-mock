@@ -22,7 +22,7 @@ client_req.on('end', function () {
 	console.log("body=", typeof body, body )
 	if (is_demo && (client_req.headers['x-amz-target']) === ('DynamoDB_20120810.DeleteTable') && (demo_tables.indexOf(body_json.TableName) !== -1 ) ) {
 		client_res.statusCode = 400;
-		client_res.end(JSON.stringify({ err: { errorMessage: 'deleteTable forbidden in demo'}, }));
+		client_res.end(JSON.stringify({"__type":"com.amazonaws.dynamodb.v20120810#ResourceForbiddenException","message":"Cannot delete demo tables"}));
 		return;
 	}
 
