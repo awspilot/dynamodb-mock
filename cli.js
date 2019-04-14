@@ -1,21 +1,29 @@
 #!/usr/bin/env node
+console.log("Starting dynamodb proxy server on port 10004")
+
 var http = require('http')
 var is_demo = process.env.DEMO == '1';
+var demo_tables = [ 'cities','countries' ];
+console.log("demo is ", is_demo ? 'ON' : 'OFF' )
 
-
-console.log("Starting dynamodb proxy server on port 10004")
 http.createServer(function (client_req, client_res) {
-
-
 
 var body = '';
 client_req.on('data', function (data) {body += data;});
 client_req.on('end', function () {
 
+	var body_json = null
+	try {
+		body_json = JSON.parse(body)
+	} catch (err) {
+		console.log(err)
+	}
 
 	console.log("body=", typeof body, body )
-	if (is_demo && client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteTable' ) {
-		
+	if (is_demo && (client_req.headers['x-amz-target']) === ('DynamoDB_20120810.DeleteTable') && (demo_tables.indexOf(body_json.TableName) !== -1 ) ) {
+		client_res.statusCode = 400;
+		client_res.end(JSON.stringify({ err: { errorMessage: 'deleteTable forbidden in demo'}, }));
+		return;
 	}
 
 	console.log("received request ",JSON.stringify({
@@ -88,11 +96,11 @@ client_req.on('end', function () {
 
 
 console.log("Starting dynamodb proxy server on port 10002")
-var http = require('http');
+
 var AWS = require('aws-sdk');
 AWS.config.update({ accessKeyId: "myKeyId", secretAccessKey: "secretKey", region: "us-east-1" })
 
-console.log("demo is ", is_demo ? 'ON' : 'OFF' )
+
 http.createServer(function (request, response) {
 	console.log( "[dynamoproxy]", request.method, request.url )
 	if ( request.method === 'POST') {
@@ -112,7 +120,7 @@ http.createServer(function (request, response) {
 			}
 			response.writeHead(200, { 'Content-Type': 'application/json' });
 
-			var demo_tables = [ 'cities','countries' ];
+			
 			if (is_demo) {
 
 				if ( event._POST.method === 'deleteTable' && (demo_tables.indexOf(event._POST.payload.TableName) !== -1) )
