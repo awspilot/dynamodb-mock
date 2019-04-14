@@ -25,6 +25,12 @@ client_req.on('end', function () {
 		client_res.end(JSON.stringify({"__type":"com.amazonaws.dynamodb.v20120810#ResourceForbiddenException","message":"Cannot delete demo tables"}));
 		return;
 	}
+	if (is_demo && (client_req.headers['x-amz-target']) === ('DynamoDB_20120810.UpdateTable') && (demo_tables.indexOf(body_json.TableName) !== -1 ) ) {
+		client_res.statusCode = 400;
+		client_res.end(JSON.stringify({"__type":"com.amazonaws.dynamodb.v20120810#ResourceForbiddenException","message":"Cannot update demo tables"}));
+		return;
+	}
+
 
 	console.log("received request ",JSON.stringify({
 		url: client_req.url,
@@ -123,8 +129,6 @@ http.createServer(function (request, response) {
 			
 			if (is_demo) {
 
-				if ( event._POST.method === 'deleteTable' && (demo_tables.indexOf(event._POST.payload.TableName) !== -1) )
-					return response.end(JSON.stringify({ err: { errorMessage: 'deleteTable forbidden in demo'}, }));
 				if ( event._POST.method === 'updateTable' && (demo_tables.indexOf(event._POST.payload.TableName) !== -1) )
 					return response.end(JSON.stringify({ err: { errorMessage: 'updateTable forbidden in demo'}, }));
 
@@ -137,17 +141,17 @@ http.createServer(function (request, response) {
 
 
 			switch ( event._POST.method ) {
-				case 'listTables':
-				case 'createTable':
-				case 'deleteTable':
-				case 'describeTable':
-				case 'describeTimeToLive':
-				case 'updateTimeToLive':
-				case 'updateTable':
+				//case 'listTables':
+				//case 'createTable':
+				//case 'deleteTable':
+				//case 'describeTable':
+				//case 'describeTimeToLive':
+				//case 'updateTimeToLive':
+				//case 'updateTable':
 				case 'scan':
 				case 'query':
 				case 'deleteItem':
-				case 'putItem':
+				//case 'putItem':
 					dynamodb[event._POST.method](event._POST.payload, function(err, data) {
 						response.end(JSON.stringify({ err: err, data:data }));
 					})
