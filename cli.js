@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 console.log("Starting dynamodb proxy server on port 10004")
 
+var AWS = require('aws-sdk')
 var http = require('http')
 var is_demo = process.env.DEMO == '1';
 var demo_tables = [ 'cities','countries' ];
@@ -12,6 +13,14 @@ http.createServer(function (client_req, client_res) {
 	client_req.on('data', function (data) {body += data;});
 	client_req.on('end', function () {
 
+		var auth_re = /(?<algorithm>[A-Z0-9\-]+)\ Credential=(?<accesskey>[^\/]+)\/(?<unknown1>[^\/]+)\/(?<region>[^\/]+)\/([^\/]+)\/([^,]+), SignedHeaders=(?<signed_headers>[^,]+), Signature=(?<signature>[a-z0-9]+)/
+
+		var auth = client_req.headers['authorization'].match( auth_re );
+		if (  auth === null )
+			return client_res.end('Failed auth');
+
+		console.log("auth region=",auth.groups.region )
+
 		var body_json = null
 		try {
 			body_json = JSON.parse(body)
@@ -19,7 +28,8 @@ http.createServer(function (client_req, client_res) {
 			console.log(err)
 		}
 
-		console.log("body=", typeof body, body )
+		console.log("body json=", JSON.stringify(body_json, null, "\t") )
+
 		if (is_demo && (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteTable') && (demo_tables.indexOf(body_json.TableName) !== -1 ) ) {
 			client_res.statusCode = 400;
 			client_res.end(JSON.stringify({"__type":"com.amazonaws.dynamodb.v20120810#ResourceForbiddenException","message":"Cannot delete demo tables"}));
@@ -47,6 +57,16 @@ http.createServer(function (client_req, client_res) {
 			return;
 		}
 
+		var cloudwatch = new AWS.CloudWatch({
+			endpoint: process.env.CW_ENDPOINT,
+			region: auth.groups.region,
+			credentials: {
+				accessKeyId: 'x',
+				secretAccessKey: 'y',
+			}
+		});
+
+
 
 		console.log("received request ",JSON.stringify({
 			url: client_req.url,
@@ -69,7 +89,7 @@ http.createServer(function (client_req, client_res) {
 		}
 
 
-		console.log("proxying request to ", JSON.stringify(proxy_options, null,"\t"))
+		//console.log("proxying request to ", JSON.stringify(proxy_options, null,"\t"))
 
 		var req=http.request(proxy_options, function(res) {
 			var body = '';
@@ -77,6 +97,33 @@ http.createServer(function (client_req, client_res) {
 				body += chunk;
 			});
 			res.on('end', function () {
+
+				// @todo: increment UserErrors on HTTP 400 status code
+				// @todo: increment SystemErrors on HTTP 500 status code
+
+
+				// GetRecords.SystemErrors
+				// ProvisionedReadCapacityUnits, ProvisionedWriteCapacityUnits
+				// WriteThrottleEvents , ReadThrottleEvents,
+				// ConsumedWriteCapacityUnits, ConsumedReadCapacityUnits
+
+
+				if ( res.statusCode === 200 ) {
+					if ( (client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") ) {
+
+						// @todo: take value from ConsumedCapacity.CapacityUnits or size of payload
+						var params = {
+							MetricData:[{
+								MetricName: 'ConsumedWriteCapacityUnits',
+								Timestamp:  new Date,
+								Value: 1,
+							}],
+							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
+						};
+						cloudwatch.putMetricData(params, console.log );
+					}
+				}
+
 				console.log("proxy ended")
 				client_res.writeHead(res.statusCode, res.headers);
 				client_res.end(body);
