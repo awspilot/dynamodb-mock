@@ -98,20 +98,38 @@ http.createServer(function (client_req, client_res) {
 			});
 			res.on('end', function () {
 
-				// @todo: increment UserErrors on HTTP 400 status code
-				// @todo: increment SystemErrors on HTTP 500 status code
+				if ( res.statusCode === 400 ) {
+						var params = {
+							MetricData:[{
+								MetricName: 'UserErrors',
+								Timestamp:  new Date,
+								Value: 1,
+							}],
+							Namespace: 'AWS/DynamoDB',
+						};
+						cloudwatch.putMetricData( params, console.log );
+				}
+				if ( res.statusCode === 500 ) {
+						var params = {
+							MetricData:[{
+								MetricName: 'SystemErrors',
+								Timestamp:  new Date,
+								Value: 1,
+							}],
+							Namespace: 'AWS/DynamoDB',
+						};
+						cloudwatch.putMetricData( params, console.log );
+				}
 
-
-				// GetRecords.SystemErrors
 				// ProvisionedReadCapacityUnits, ProvisionedWriteCapacityUnits
 				// WriteThrottleEvents , ReadThrottleEvents,
-				// ConsumedWriteCapacityUnits, ConsumedReadCapacityUnits
-
 
 				if ( res.statusCode === 200 ) {
 					if ( (client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") ) {
 
-						// @todo: take value from ConsumedCapacity.CapacityUnits or size of payload
+						// @todo: take value from ConsumedCapacity.CapacityUnits
+						// @todo: if no comsumed capacity in response, use payload size + read consistency 
+
 						var params = {
 							MetricData:[{
 								MetricName: 'ConsumedWriteCapacityUnits',
@@ -122,6 +140,27 @@ http.createServer(function (client_req, client_res) {
 						};
 						cloudwatch.putMetricData(params, console.log );
 					}
+
+					if (
+							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Scan") || 
+							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Query") ||
+							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.GetItem")
+					) {
+						// @todo: take value from ConsumedCapacity.CapacityUnits
+						// @todo: if no comsumed capacity in response, use payload size + read consistency 
+						var params = {
+							MetricData:[{
+								MetricName: 'ConsumedReadCapacityUnits',
+								Timestamp:  new Date,
+								Value: 1,
+							}],
+							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
+						};
+						cloudwatch.putMetricData(params, console.log );
+
+					}
+
+
 				}
 
 				console.log("proxy ended")
