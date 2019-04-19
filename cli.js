@@ -135,6 +135,12 @@ http.createServer(function (client_req, client_res) {
 								MetricName: 'ConsumedWriteCapacityUnits',
 								Timestamp:  new Date,
 								Value: 1,
+								Dimensions: [
+									{
+										Name: 'TableName', 
+										Value: body_json.TableName
+									},
+								],
 							}],
 							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
 						};
@@ -153,11 +159,16 @@ http.createServer(function (client_req, client_res) {
 								MetricName: 'ConsumedReadCapacityUnits',
 								Timestamp:  new Date,
 								Value: 1,
+								Dimensions: [
+									{
+										Name: 'TableName', 
+										Value: body_json.TableName
+									},
+								],
 							}],
 							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
 						};
 						cloudwatch.putMetricData(params, console.log );
-
 					}
 
 
