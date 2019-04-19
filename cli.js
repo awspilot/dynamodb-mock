@@ -142,7 +142,7 @@ http.createServer(function (client_req, client_res) {
 									},
 								],
 							}],
-							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
+							Namespace: 'AWS/DynamoDB',
 						};
 						cloudwatch.putMetricData(params, console.log );
 					}
@@ -166,7 +166,7 @@ http.createServer(function (client_req, client_res) {
 									},
 								],
 							}],
-							Namespace: 'AWS/DynamoDB/' + body_json.TableName,
+							Namespace: 'AWS/DynamoDB',
 						};
 						cloudwatch.putMetricData(params, console.log );
 					}
