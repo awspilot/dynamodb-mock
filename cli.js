@@ -19,6 +19,7 @@ http.createServer(function (client_req, client_res) {
 				'Access-Control-Allow-Origin': '*',
 				'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
 				'Access-Control-Max-Age': 2592000, // 30 days
+				'Access-Control-Request-Headers': 'authorization,content-type,x-amz-content-sha256,x-amz-date,x-amz-target,x-amz-user-agent',
 			});
 			client_res.end();
 			return;
