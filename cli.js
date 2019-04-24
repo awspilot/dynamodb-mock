@@ -13,9 +13,21 @@ http.createServer(function (client_req, client_res) {
 	client_req.on('data', function (data) {body += data;});
 	client_req.on('end', function () {
 
+		// if OPTIONS , reply with CORS '*'
+		if (client_req.method === 'OPTIONS') {
+			client_res.writeHead(204, {
+				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+				'Access-Control-Max-Age': 2592000, // 30 days
+			});
+			client_res.end();
+			return;
+		}
+
+
 		var auth_re = /(?<algorithm>[A-Z0-9\-]+)\ Credential=(?<accesskey>[^\/]+)\/(?<unknown1>[^\/]+)\/(?<region>[^\/]+)\/([^\/]+)\/([^,]+), SignedHeaders=(?<signed_headers>[^,]+), Signature=(?<signature>[a-z0-9]+)/
 
-		var auth = client_req.headers['authorization'].match( auth_re );
+		var auth = (client_req.headers['authorization'] || '') .match( auth_re );
 		if (  auth === null )
 			return client_res.end('Failed auth');
 
