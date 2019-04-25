@@ -16,10 +16,13 @@ http.createServer(function (client_req, client_res) {
 		// if OPTIONS , reply with CORS '*'
 		if (client_req.method === 'OPTIONS') {
 			client_res.writeHead(204, {
-				'Access-Control-Allow-Origin': '*',
-				'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+				'Access-Control-Allow-Origin': client_req.headers['origin'] || '*',
+				'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+				'Access-Control-Allow-Headers': 'content-type, authorization, x-amz-content-sha256, x-amz-date, x-amz-target, x-amz-user-agent',
 				'Access-Control-Max-Age': 2592000, // 30 days
-				'Access-Control-Request-Headers': 'authorization,content-type,x-amz-content-sha256,x-amz-date,x-amz-target,x-amz-user-agent',
+				
+				// 'Content-Type': 'text/html;charset=UTF-8',
+				// 'Content-Length': '0',
 			});
 			client_res.end();
 			return;
@@ -188,6 +191,7 @@ http.createServer(function (client_req, client_res) {
 				}
 
 				console.log("proxy ended")
+				res.headers['Access-Control-Allow-Origin'] = '*'
 				client_res.writeHead(res.statusCode, res.headers);
 				client_res.end(body);
 			});
