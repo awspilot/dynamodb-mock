@@ -147,25 +147,35 @@ http.createServer(function (client_req, client_res) {
 						response_body_json = JSON.parse(body)
 					} catch (e) {}
 
-					// body_json.ConsumedCapacity.Table
-					console.log("response_body_json=", response_body_json )
-
-
-
 
 					if ( 
 						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || 
 						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") 
 					) {
 
-						// @todo: take value from ConsumedCapacity.CapacityUnits
-						// @todo: if no comsumed capacity in response, use payload size + read consistency 
+						// step1, calculare payload size
+						var payload_size = 1;
+						if (body_json.hasOwnProperty('Item')) // for PutItem
+							payload_size = JSON.stringify(body_json.Item).length;
+
+						if (body_json.hasOwnProperty('AttributeUpdates')) // for UpdateItem
+							payload_size = JSON.stringify(body_json.AttributeUpdates).length; // this is not fair as the item size should include existing attributes as well
+
+						// A map of attribute values as they appear before or after the UpdateItem operation, more accurate than payload.AttributeUpdates
+						if (response_body_json.hasOwnProperty('Attributes') && (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem")) 
+							payload_size = JSON.stringify(response_body_json.Item).length;
+
+						// step2, calculare write capacity units based on payload size
+						var write_capacity_units = Math.ceil(payload_size / 4096);
+
+						if (((response_body_json || {}).ConsumedCapacity || {}).WriteCapacityUnits > 0 )
+							write_capacity_units = parseFloat(response_body_json.ConsumedCapacity.WriteCapacityUnits)
 
 						var params = {
 							MetricData:[{
 								MetricName: 'ConsumedWriteCapacityUnits',
 								Timestamp:  new Date,
-								Value: 1,
+								Value: write_capacity_units,
 								Dimensions: [
 									{
 										Name: 'TableName', 
