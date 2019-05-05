@@ -141,7 +141,22 @@ http.createServer(function (client_req, client_res) {
 				// WriteThrottleEvents , ReadThrottleEvents,
 
 				if ( res.statusCode === 200 ) {
-					if ( (client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") ) {
+
+					var response_body_json;
+					try {
+						response_body_json = JSON.parse(body)
+					} catch (e) {}
+
+					// body_json.ConsumedCapacity.Table
+					console.log("response_body_json=", response_body_json )
+
+
+
+
+					if ( 
+						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || 
+						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") 
+					) {
 
 						// @todo: take value from ConsumedCapacity.CapacityUnits
 						// @todo: if no comsumed capacity in response, use payload size + read consistency 
@@ -168,13 +183,29 @@ http.createServer(function (client_req, client_res) {
 							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Query") ||
 							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.GetItem")
 					) {
-						// @todo: take value from ConsumedCapacity.CapacityUnits
-						// @todo: if no comsumed capacity in response, use payload size + read consistency 
+
+						// step1, calculare response size
+						var response_size = 1;
+						if (response_body_json.hasOwnProperty('Item')) // for GetItem
+							response_size = JSON.stringify(response_body_json.Item).length;
+
+						if (response_body_json.hasOwnProperty('Items')) // for Query and Scan
+							response_size = JSON.stringify(response_body_json.Items).length;
+
+						// step2, calculare read capacity units based on response size
+						var read_capacity_units = Math.ceil(response_size / 4096) / 2;
+						if ( body_json.ConsistentRead === true )
+							read_capacity_units = Math.ceil(response_size / 4096); // each 4K costs 1 read
+
+						if (((response_body_json || {}).ConsumedCapacity || {}).ReadCapacityUnits > 0 )
+							read_capacity_units = parseFloat(response_body_json.ConsumedCapacity.ReadCapacityUnits)
+
+
 						var params = {
 							MetricData:[{
 								MetricName: 'ConsumedReadCapacityUnits',
 								Timestamp:  new Date,
-								Value: 1,
+								Value: read_capacity_units,
 								Dimensions: [
 									{
 										Name: 'TableName', 
