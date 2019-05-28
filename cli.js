@@ -20,7 +20,7 @@ http.createServer(function (client_req, client_res) {
 				'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
 				'Access-Control-Allow-Headers': 'content-type, authorization, x-amz-content-sha256, x-amz-date, x-amz-target, x-amz-user-agent',
 				'Access-Control-Max-Age': 2592000, // 30 days
-				
+
 				// 'Content-Type': 'text/html;charset=UTF-8',
 				// 'Content-Length': '0',
 			});
@@ -148,9 +148,9 @@ http.createServer(function (client_req, client_res) {
 					} catch (e) {}
 
 
-					if ( 
-						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") || 
-						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem") 
+					if (
+						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.PutItem") ||
+						(client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem")
 					) {
 
 						// step1, calculare payload size
@@ -162,8 +162,8 @@ http.createServer(function (client_req, client_res) {
 							payload_size = JSON.stringify(body_json.AttributeUpdates).length; // this is not fair as the item size should include existing attributes as well
 
 						// A map of attribute values as they appear before or after the UpdateItem operation, more accurate than payload.AttributeUpdates
-						if (response_body_json.hasOwnProperty('Attributes') && (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem")) 
-							payload_size = JSON.stringify(response_body_json.Item).length;
+						if (response_body_json.hasOwnProperty('Attributes') && (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem"))
+							payload_size = JSON.stringify(response_body_json.Item || {}).length;
 
 						// step2, calculare write capacity units based on payload size
 						var write_capacity_units = Math.ceil(payload_size / 4096);
@@ -178,7 +178,7 @@ http.createServer(function (client_req, client_res) {
 								Value: write_capacity_units,
 								Dimensions: [
 									{
-										Name: 'TableName', 
+										Name: 'TableName',
 										Value: body_json.TableName
 									},
 								],
@@ -189,7 +189,7 @@ http.createServer(function (client_req, client_res) {
 					}
 
 					if (
-							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Scan") || 
+							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Scan") ||
 							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.Query") ||
 							(client_req.headers['x-amz-target'] === "DynamoDB_20120810.GetItem")
 					) {
@@ -218,7 +218,7 @@ http.createServer(function (client_req, client_res) {
 								Value: read_capacity_units,
 								Dimensions: [
 									{
-										Name: 'TableName', 
+										Name: 'TableName',
 										Value: body_json.TableName
 									},
 								],
