@@ -163,7 +163,7 @@ http.createServer(function (client_req, client_res) {
 
 						// A map of attribute values as they appear before or after the UpdateItem operation, more accurate than payload.AttributeUpdates
 						if (response_body_json.hasOwnProperty('Attributes') && (client_req.headers['x-amz-target'] === "DynamoDB_20120810.UpdateItem"))
-							payload_size = JSON.stringify(response_body_json.Item || {}).length;
+							payload_size = JSON.stringify(response_body_json.Attributes).length;
 
 						// step2, calculare write capacity units based on payload size
 						var write_capacity_units = Math.ceil(payload_size / 4096);
