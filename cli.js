@@ -10,7 +10,7 @@ var demo_tables = [ 'cities','countries' ];
 console.log("demo is ", is_demo ? 'ON' : 'OFF' )
 
 backup_storage_dir = process.env.DYNAMODB_BACKUP_STORAGE_PATH ||  '/storage';
-console.log('[dynamodb] backup storage dir is', backup_storage_dir )
+console.log('[DynamoDB] backup storage dir is', backup_storage_dir )
 
 backupdb = levelup( leveldown(backup_storage_dir + '/dynamodbbackup.db') ),
 
@@ -41,8 +41,6 @@ http.createServer(function (client_req, client_res) {
 		var auth = (client_req.headers['authorization'] || '') .match( auth_re );
 		if (  auth === null )
 			return client_res.end('Failed auth');
-
-		//console.log("auth region=",auth.groups.region )
 
 		var body_json = null
 		try {
