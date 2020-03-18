@@ -1,7 +1,7 @@
 module.exports = function( client_req, client_res, region, body_json ) {
 
 
-	//console.log("CreateBackup=", JSON.stringify(body_json, null, "\t") )
+	console.log("[DynamoDB] CreateBackup", region, body_json.TableName ) // JSON.stringify(body_json, null, "\t")
 
 	var account_id = '000000000000';
 	var backup_id = require('crypto').createHash('md5').update( Math.random().toString() ).digest("hex").slice(0,8)
