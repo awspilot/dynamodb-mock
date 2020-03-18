@@ -52,7 +52,9 @@ module.exports = function( client_req, client_res, region, body_json ) {
 		});
 
 		client_res.end(JSON.stringify({
-			BackupSummaries: backups_to_return
+			BackupSummaries: backups_to_return.sort(function(a, b ) {
+				return a.BackupCreationDateTime > b.BackupCreationDateTime ? -1 : 1;
+			})
 		}));
 
 
