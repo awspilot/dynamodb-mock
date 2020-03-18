@@ -3,9 +3,16 @@ console.log("Starting dynamodb proxy server on port 10004")
 
 var AWS = require('aws-sdk')
 var http = require('http')
+levelup = require('levelup')
+leveldown = require('leveldown')
 var is_demo = process.env.DEMO == '1';
 var demo_tables = [ 'cities','countries' ];
 console.log("demo is ", is_demo ? 'ON' : 'OFF' )
+
+backup_storage_dir = process.env.DYNAMODB_BACKUP_STORAGE_PATH ||  '/storage';
+console.log('[dynamodb] backup storage dir is', backup_storage_dir )
+
+backupdb = levelup( leveldown(backup_storage_dir + '/dynamodbbackup.db') ),
 
 http.createServer(function (client_req, client_res) {
 
@@ -35,7 +42,7 @@ http.createServer(function (client_req, client_res) {
 		if (  auth === null )
 			return client_res.end('Failed auth');
 
-		console.log("auth region=",auth.groups.region )
+		//console.log("auth region=",auth.groups.region )
 
 		var body_json = null
 		try {
@@ -44,7 +51,9 @@ http.createServer(function (client_req, client_res) {
 			console.log(err)
 		}
 
-		console.log("body json=", JSON.stringify(body_json, null, "\t") )
+		//console.log("reqHead=", JSON.stringify(client_req.headers, null, "\t") )
+
+
 
 		if (is_demo && (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteTable') && (demo_tables.indexOf(body_json.TableName) !== -1 ) ) {
 			client_res.statusCode = 400;
@@ -67,11 +76,17 @@ http.createServer(function (client_req, client_res) {
 
 
 		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.ListBackups') {
-			client_res.end(JSON.stringify({
-				BackupSummaries: []
-			}));
-			return;
+			return require('./src/ListBackups')( client_req, client_res, auth.groups.region, body_json )
 		}
+
+		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.CreateBackup') {
+			return require('./src/CreateBackup')( client_req, client_res, auth.groups.region, body_json )
+		}
+
+		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteBackup') {
+			return require('./src/DeleteBackup')( client_req, client_res, auth.groups.region, body_json )
+		}
+
 
 		var cloudwatch = new AWS.CloudWatch({
 			endpoint: process.env.CW_ENDPOINT,
