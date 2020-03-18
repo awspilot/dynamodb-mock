@@ -1,7 +1,7 @@
 
 module.exports = function( client_req, client_res, region, body_json ) {
 
-	console.log("[DynamoDB] ListBackups") // JSON.stringify(body_json, null, "\t")
+	console.log("[DynamoDB] ListBackups", region ) // JSON.stringify(body_json, null, "\t")
 
 
 	var account_id = '000000000000';
