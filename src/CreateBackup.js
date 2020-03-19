@@ -1,5 +1,27 @@
-module.exports = function( client_req, client_res, region, body_json ) {
 
+const DynamoFactory = require('@awspilot/dynamodb')
+
+
+
+module.exports = function( client_req, client_res, region, body_json, auth ) {
+
+
+	// we connect to local dynamodb,
+	var DynamoDB = new DynamoFactory({
+		accessKeyId: auth.accessKeyId,
+		secretAccessKey: 'x',
+		region: region,
+		endpoint: 'http://localhost:8000',
+	})
+
+	// unline aws, backups are created into user's s3
+	var s3 = new AWS.S3({
+		accessKeyId: auth.accessKeyId,
+		secretAccessKey: 'x',
+		region: region,
+		endpoint: 'https://djaorxfotj9hr.cloudfront.net/v1/s3',
+		s3ForcePathStyle: true,
+	});
 
 	console.log("[DynamoDB] CreateBackup", region, body_json.TableName ) // JSON.stringify(body_json, null, "\t")
 
@@ -16,11 +38,80 @@ module.exports = function( client_req, client_res, region, body_json ) {
 		BackupSizeBytes: 0,
 		BackupStatus: "CREATING", // "AVAILABLE",
 		BackupType:"USER",
+		s3_key: body_json.TableName + '-' + region + '-' + backup_id + '.sql',
 	}
 
-	backupdb.put( key , JSON.stringify(value), function (err) {
+
+	var scan_stream;
+	var scan_buf;
+
+	async.waterfall([
+		// step1, create backup record in db
+		function( cb ) {
+			backupdb.put( key , JSON.stringify(value), function (err) {
+				if (err)
+					return cb(err)
+
+				cb()
+			})
+		},
+
+		// step2, create bucket, let it fail if already exists
+		function( cb ) {
+			s3.createBucket({Bucket: 'dynamodb-backups',}, function( err, data ) {
+				console.log("s3.createBucket", err, data )
+				cb()
+			})
+		},
+
+		// step3, san the table
+		function( cb ) {
+			DynamoDB
+				.query('SCAN * FROM ' + body_json.TableName + ' INTO STREAM', function( err, data ) {
+					if (err)
+						return cb(err)
+
+					scan_stream = data;
+
+					var bufs = [];
+					scan_stream.on('data', function(d){ bufs.push(d); });
+					scan_stream.on('end', function(){
+						scan_buf = Buffer.concat(bufs);
+					})
+
+					cb()
+				})
+		},
+
+
+		// step4, write data to s3
+		function( cb ) {
+
+			//data.pipe(process.stdout, { end: false })
+
+			s3.putObject({
+				Bucket: 'dynamodb-backups',
+				Key: value.s3_key,
+				Body: scan_buf,
+			}, function( err ) {
+				console.log("s3.putObject", err )
+				cb()
+			})
+		},
+
+	], function( err ) {
 		if (err) {
-			client_res.statusCode = 404;
+			client_res.writeHead( 404, {
+				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Expose-Headers': 'x-amzn-RequestId,x-amzn-ErrorType,x-amzn-ErrorMessage,Date',
+				Connection: 'keep-alive',
+				//Content-Length: 256
+				'Content-Type': 'application/x-amz-json-1.0',
+				//Date: Wed, 18 Mar 2020 11:52:59 GMT
+				Server: 'Server',
+				//x-amz-crc32: 782095031
+				'x-amzn-RequestId': 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+			});
 			return client_res.end()
 		}
 
