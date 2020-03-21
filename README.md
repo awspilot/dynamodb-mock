@@ -7,9 +7,9 @@ It's purpose is to
 
  - [x] act as a DynamoDB endpoint
  - [x] proxy requests to DynamoDB local
- - [ ] intercept and handle backup requests ( create, delete, restore, list )
+ - [x] intercept and handle backup requests ( create, delete, restore, list )
  - [x] publish cloudwatch metrics ( partially working )
- - [ ] map lambda function to DynamoDB local streams 
+ - [ ] map lambda function to DynamoDB local streams
  - [x] if demo mode, prevent deleting demo tables and items
 
 This is a subproject of @awspilot/dynamodb-ui
