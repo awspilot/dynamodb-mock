@@ -1,5 +1,14 @@
 
-module.exports = function( client_req, client_res, region, body_json ) {
+module.exports = function( client_req, client_res, region, body_json, auth ) {
+
+	// unline aws, backups are created into user's s3
+	var s3 = new AWS.S3({
+		accessKeyId: auth.accessKeyId,
+		secretAccessKey: 'x',
+		region: region,
+		endpoint: process.env.DYNAMODBMOCK_BACKUP_S3_ENDPOINT,
+		s3ForcePathStyle: true,
+	});
 
 	console.log("[DynamoDB] DeleteBackup", body_json.BackupArn ) // JSON.stringify(body_json, null, "\t")
 
@@ -15,35 +24,45 @@ module.exports = function( client_req, client_res, region, body_json ) {
 
 	var key = BackupArn.groups.account_id + ' ' + BackupArn.groups.region + ' ' + BackupArn.groups.table + ' ' + BackupArn.groups.backup_id;
 
-	backupdb.get( key , function (err, data ) {
+	var key_data;
+	async.waterfall([
 
 
-		if (err) {
-			client_res.statusCode = 404;
-			client_res.end()
-			return;
-		}
+		// step1, get the backup
+		function( cb ) {
+			backupdb.get( key , function (err, data ) {
 
-		var key_data;
-		try {
-			key_data = JSON.parse(data);
-		} catch (e) {
-		}
+				if (err)
+					return reply_with_error( client_res )
 
-		if (!key_data) {
-			client_res.statusCode = 404;
-			client_res.end()
-			return;
-		}
+				try {
+					key_data = JSON.parse(data);
+				} catch (e) {
+					return reply_with_error( client_res )
+				}
 
-		// delete it
-		backupdb.del( key , function (err) {
-			if (err) {
-				client_res.statusCode = 404;
-				client_res.end()
-				return;
-			}
+				if (!key_data)
+					return reply_with_error( client_res )
 
+				cb()
+			})
+		},
+
+
+		// step2, mark status as deleting
+		function( cb ) {
+			key_data.BackupStatus = 'DELETING';
+
+			backupdb.put( key , JSON.stringify(key_data), function (err) {
+				if (err)
+					return cb(err)
+
+				cb()
+			})
+		},
+
+		// step3, end client connection, continue in background
+		function( cb ) {
 			client_res.writeHead( 200, {
 				'Access-Control-Allow-Origin': '*',
 				'Access-Control-Expose-Headers': 'x-amzn-RequestId,x-amzn-ErrorType,x-amzn-ErrorMessage,Date',
@@ -56,8 +75,31 @@ module.exports = function( client_req, client_res, region, body_json ) {
 				'x-amzn-RequestId': 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
 			});
 			client_res.end()
-		})
+			cb()
+		},
 
+
+		// step3, delete the s3 backup file
+		function( cb ) {
+			s3.deleteObject({
+				Bucket: 'dynamodb-backups',
+				Key: key_data.s3_key,
+			}, function( err, data ) {
+				setTimeout( cb , 3000)
+			})
+		},
+
+
+		// step4, delete the backup record
+		function( cb ) {
+			backupdb.del( key , function (err) {
+				cb()
+			})
+		}
+
+	], function() {
 	})
+
+
 
 }
