@@ -1,6 +1,6 @@
 # dynamodb-mock
 
-Not a dynamodb implementation!  
+Not an Amazon DynamoDB implementation!  
 It acts as a middleware between client and DynamoDB local  
 
 It's purpose is to
