@@ -1,18 +1,34 @@
 #!/usr/bin/env node
 console.log("Starting dynamodb proxy server on port 10004")
 
-var AWS = require('aws-sdk')
+AWS = require('aws-sdk')
 var http = require('http')
+async = require('async');
 levelup = require('levelup')
 leveldown = require('leveldown')
 var is_demo = process.env.DEMO == '1';
 var demo_tables = [ 'cities','countries' ];
 console.log("demo is ", is_demo ? 'ON' : 'OFF' )
 
-backup_storage_dir = process.env.DYNAMODB_BACKUP_STORAGE_PATH ||  '/storage';
+backup_storage_dir = process.env.DYNAMODBMOCK_BACKUP_DB_STORAGE_PATH ||  '/storage';
 console.log('[DynamoDB] backup storage dir is', backup_storage_dir )
 
-backupdb = levelup( leveldown(backup_storage_dir + '/dynamodbbackup.db') ),
+backupdb = levelup( leveldown(backup_storage_dir + '/dynamodb_backup.db') ),
+
+reply_with_error = function( res ) {
+	res.writeHead( 404, {
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Expose-Headers': 'x-amzn-RequestId,x-amzn-ErrorType,x-amzn-ErrorMessage,Date',
+		Connection: 'keep-alive',
+		//Content-Length: 256
+		'Content-Type': 'application/x-amz-json-1.0',
+		//Date: Wed, 18 Mar 2020 11:52:59 GMT
+		Server: 'Server',
+		//x-amz-crc32: 782095031
+		'x-amzn-RequestId': 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+	});
+	res.end()
+}
 
 http.createServer(function (client_req, client_res) {
 
@@ -35,8 +51,8 @@ http.createServer(function (client_req, client_res) {
 			return;
 		}
 
-
-		var auth_re = /(?<algorithm>[A-Z0-9\-]+)\ Credential=(?<accesskey>[^\/]+)\/(?<unknown1>[^\/]+)\/(?<region>[^\/]+)\/([^\/]+)\/([^,]+), SignedHeaders=(?<signed_headers>[^,]+), Signature=(?<signature>[a-z0-9]+)/
+		// needs nodejs 10
+		var auth_re = /(?<algorithm>[A-Z0-9\-]+)\ Credential=(?<accessKeyId>[^\/]+)\/(?<unknown1>[^\/]+)\/(?<region>[^\/]+)\/([^\/]+)\/([^,]+), SignedHeaders=(?<signed_headers>[^,]+), Signature=(?<signature>[a-z0-9]+)/
 
 		var auth = (client_req.headers['authorization'] || '') .match( auth_re );
 		if (  auth === null )
@@ -78,13 +94,16 @@ http.createServer(function (client_req, client_res) {
 		}
 
 		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.CreateBackup') {
-			return require('./src/CreateBackup')( client_req, client_res, auth.groups.region, body_json )
+			return require('./src/CreateBackup')( client_req, client_res, auth.groups.region, body_json, auth.groups )
 		}
 
 		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteBackup') {
 			return require('./src/DeleteBackup')( client_req, client_res, auth.groups.region, body_json )
 		}
 
+		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.RestoreTableFromBackup') {
+			return require('./src/RestoreTableFromBackup')( client_req, client_res, auth.groups.region, body_json, auth.groups )
+		}
 
 		var cloudwatch = new AWS.CloudWatch({
 			endpoint: process.env.CW_ENDPOINT,
