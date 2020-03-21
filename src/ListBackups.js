@@ -27,6 +27,9 @@ module.exports = function( client_req, client_res, region, body_json ) {
 				TableArn: `arn:aws:dynamodb:${backup_data.region}:${backup_data.account_id}:table/${backup_data.TableName}`,
 				TableId:"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 				TableName: backup_data.TableName,
+
+				// custom, not available in AWS, unfortunately aws-sdk wont passtrough
+				items: backup_data.items,
 			})
 		} catch (e) {
 		}
