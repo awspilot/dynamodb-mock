@@ -32,14 +32,16 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 	var value = {
 		account_id: account_id,
 		region: region,
-		TableName: body_json.TableName,
-		BackupName: body_json.BackupName,
 		created_at: new Date().getTime(),
 		backup_id: backup_id,
+		s3_key: body_json.TableName + '-' + region + '-' + (new Date().toISOString().slice(0,16)) + '-' + backup_id + '.sql',
+		items: 0,
+
+		TableName: body_json.TableName,
+		BackupName: body_json.BackupName,
 		BackupSizeBytes: 0,
 		BackupStatus: "CREATING", //  CREATING | AVAILABLE | DELETED | FAILED(awspilot)
-		BackupType:"USER", // USER | SYSTEM | AWS_BACKUP
-		s3_key: body_json.TableName + '-' + region + '-' + backup_id + '.sql',
+		BackupType: "USER", // USER | SYSTEM | AWS_BACKUP
 	}
 
 
@@ -174,6 +176,13 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 		}
 
 		value.BackupStatus = 'AVAILABLE';
+		value.BackupSizeBytes = scan_buf.length;
+		scan_buf = scan_buf.toString().split("\n").length;
+		value.items = scan_buf;
+
+		if (value.items > 0) // theres an extra new line after the last query
+			value.items--;
+
 		backupdb.put( key , JSON.stringify(value), function (err) { })
 	})
 
