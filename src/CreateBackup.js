@@ -45,9 +45,34 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 
 	var scan_stream;
 	var scan_buf;
+	var describeTable;
 
 	async.waterfall([
-		// step1, create backup record in db
+
+		// step1, describe the table
+		function( cb ) {
+			DynamoDB.client.describeTable({TableName: body_json.TableName}, function( err, data ) {
+				if (err) {
+					console.log( "[DynamoDB] CreateBackup describeTable", err )
+					reply_with_error( client_res )
+					return cb( false );
+				}
+
+				if (data.Table.TableStatus !== 'ACTIVE') {
+					reply_with_error( client_res )
+					return cb( false );
+				}
+
+
+				value.describeTable = data.Table;
+				console.log("[DynamoDB] CreateBackup describeTable")
+
+				cb()
+			})
+		},
+
+
+		// step2, create backup record in db
 		function( cb ) {
 			backupdb.put( key , JSON.stringify(value), function (err) {
 				if (err)
@@ -57,7 +82,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 			})
 		},
 
-		// end response to the client, continue in background
+		// step3, end response to the client, continue in background
 		function( cb ) {
 			client_res.writeHead( 200, {
 				'Access-Control-Allow-Origin': '*',
@@ -85,7 +110,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 		},
 
 
-		// step2, create bucket, let it fail if already exists
+		// step4, create bucket, let it fail if already exists
 		function( cb ) {
 			s3.createBucket({Bucket: 'dynamodb-backups',}, function( err, data ) {
 				if (err && err.code === 'BucketAlreadyExists')
@@ -101,7 +126,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 			})
 		},
 
-		// step3, san the table
+		// step5, san the table
 		function( cb ) {
 			DynamoDB
 				.query('SCAN * FROM ' + body_json.TableName + ' INTO STREAM', function( err, data ) {
@@ -140,13 +165,14 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 
 	], function( err ) {
 		if (err) {
-			// mark as FAILED
-			value.BackupStatus = 'FAILED';
-			backupdb.put( key , JSON.stringify(value), function (err) { })
+
+			if (err !== false ) { // false means no becup record has been created
+				value.BackupStatus = 'FAILED';
+				backupdb.put( key , JSON.stringify(value), function (err) { })
+			}
 			return;
 		}
 
-		// mark as AVAILABLE
 		value.BackupStatus = 'AVAILABLE';
 		backupdb.put( key , JSON.stringify(value), function (err) { })
 	})
