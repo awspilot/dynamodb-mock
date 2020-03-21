@@ -98,7 +98,7 @@ http.createServer(function (client_req, client_res) {
 		}
 
 		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.DeleteBackup') {
-			return require('./src/DeleteBackup')( client_req, client_res, auth.groups.region, body_json )
+			return require('./src/DeleteBackup')( client_req, client_res, auth.groups.region, body_json, auth.groups )
 		}
 
 		if (client_req.headers['x-amz-target'] === 'DynamoDB_20120810.RestoreTableFromBackup') {
