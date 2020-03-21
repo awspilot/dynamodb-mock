@@ -19,8 +19,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 		accessKeyId: auth.accessKeyId,
 		secretAccessKey: 'x',
 		region: region,
-		endpoint: 'https://djaorxfotj9hr.cloudfront.net/v1/s3',
-		//endpoint: 'http://localhost:10003',
+		endpoint: process.env.DYNAMODBMOCK_BACKUP_S3_ENDPOINT,
 		s3ForcePathStyle: true,
 	});
 
@@ -34,7 +33,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 		region: region,
 		created_at: new Date().getTime(),
 		backup_id: backup_id,
-		s3_key: body_json.TableName + '-' + region + '-' + (new Date().toISOString().slice(0,16)) + '-' + backup_id + '.sql',
+		s3_key: body_json.TableName + '-' + region + '-' + (new Date().toISOString().slice(0,16).split(':').join('-')) + '-' + backup_id + '.sql',
 		items: 0,
 
 		TableName: body_json.TableName,
