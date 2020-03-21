@@ -29,7 +29,7 @@ module.exports = function( client_req, client_res, region, body_json ) {
 				TableName: backup_data.TableName,
 
 				// custom, not available in AWS, unfortunately aws-sdk wont passtrough
-				items: backup_data.items,
+				ItemCount: backup_data.items,
 			})
 		} catch (e) {
 		}
