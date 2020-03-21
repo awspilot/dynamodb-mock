@@ -39,7 +39,7 @@ module.exports = function( client_req, client_res, region, body_json, auth ) {
 		TableName: body_json.TableName,
 		BackupName: body_json.BackupName,
 		BackupSizeBytes: 0,
-		BackupStatus: "CREATING", //  CREATING | AVAILABLE | DELETED | FAILED(awspilot)
+		BackupStatus: "CREATING", //  CREATING | AVAILABLE | DELETED | FAILED(awspilot) | DELETING(awspilot)
 		BackupType: "USER", // USER | SYSTEM | AWS_BACKUP
 	}
 
